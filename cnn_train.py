@@ -2,25 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import time
-import math
-import numpy as np
+
 import torch
-import torch.nn as nn
-from torch.nn import init
-import torch.nn.parallel
 import torch.backends.cudnn as cudnn
+import torch.nn as nn
+import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
-import torchvision.utils as vutils
 from torch.autograd import Variable
-import random
-from skimage.measure import compare_psnr
-import os
+from torch.nn import init
 
 from cnn_model import CGP2CNN
-from my_data_loader import get_train_valid_loader, get_test_loader
+from my_data_loader import get_train_valid_loader
 
 
 def weights_init(m):

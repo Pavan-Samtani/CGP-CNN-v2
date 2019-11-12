@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import math
+import sys
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
-from torch.nn import init
-from torch.autograd import Variable
-from collections import OrderedDict
-import math
-import copy
 import torch.nn.functional as F
-import sys
+from torch.autograd import Variable
 
 
 class ConvBlock(nn.Module):

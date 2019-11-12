@@ -6,6 +6,7 @@ import time
 import numpy as np
 import math
 
+
 # gene[f][c] f:function type, c:connection (nodeID)
 class Individual(object):
 
@@ -17,24 +18,25 @@ class Individual(object):
         self.eval = None
         if init:
             print('init with specific architectures')
-            self.init_gene_with_conv() # In the case of starting only convolution
+            self.init_gene_with_conv()  # In the case of starting only convolution
         else:
-            self.init_gene()           # generate initial individual randomly
+            self.init_gene()  # generate initial individual randomly
 
     def init_gene_with_conv(self):
         # initial architecture
         arch = ['S_ConvBlock_64_3']
-       
+
         input_layer_num = int(self.net_info.input_num / self.net_info.rows) + 1
         output_layer_num = int(self.net_info.out_num / self.net_info.rows) + 1
-        layer_ids = [((self.net_info.cols - 1 - input_layer_num - output_layer_num) + i) // (len(arch)) for i in range(len(arch))]
-        prev_id = 0 # i.e. input layer
+        layer_ids = [((self.net_info.cols - 1 - input_layer_num - output_layer_num) + i) // (len(arch)) for i in
+                     range(len(arch))]
+        prev_id = 0  # i.e. input layer
         current_layer = input_layer_num
         block_ids = []  # *do not connect with these ids
-        
+
         # building convolution net
         for i, idx in enumerate(layer_ids):
-            
+
             current_layer += idx
             n = current_layer * self.net_info.rows + np.random.randint(self.net_info.rows)
             block_ids.append(n)
@@ -43,13 +45,13 @@ class Individual(object):
             max_connect_id = col * self.net_info.rows + self.net_info.input_num
             min_connect_id = (col - self.net_info.level_back) * self.net_info.rows + self.net_info.input_num \
                 if col - self.net_info.level_back >= 0 else 0
-            
+
             self.gene[n][1] = prev_id
             for j in range(1, self.net_info.max_in_num):
                 self.gene[n][j + 1] = min_connect_id + np.random.randint(max_connect_id - min_connect_id)
-            
+
             prev_id = n + self.net_info.input_num
-        
+
         # output layer        
         n = self.net_info.node_num
         type_num = self.net_info.func_type_num if n < self.net_info.node_num else self.net_info.out_type_num
@@ -58,18 +60,18 @@ class Individual(object):
         max_connect_id = col * self.net_info.rows + self.net_info.input_num
         min_connect_id = (col - self.net_info.level_back) * self.net_info.rows + self.net_info.input_num \
             if col - self.net_info.level_back >= 0 else 0
-        
+
         self.gene[n][1] = prev_id
         for i in range(1, self.net_info.max_in_num):
-            self.gene[n][i + 1] = min_connect_id + np.random.randint(max_connect_id - min_connect_id)        
-        block_ids.append(n) 
-           
+            self.gene[n][i + 1] = min_connect_id + np.random.randint(max_connect_id - min_connect_id)
+        block_ids.append(n)
+
         # intermediate node
         for n in range(self.net_info.node_num + self.net_info.out_num):
-            
+
             if n in block_ids:
                 continue
-            
+
             # type gene
             type_num = self.net_info.func_type_num if n < self.net_info.node_num else self.net_info.out_type_num
             self.gene[n][0] = np.random.randint(type_num)
@@ -103,14 +105,14 @@ class Individual(object):
         if not self.is_active[n]:
             self.is_active[n] = True
             t = self.gene[n][0]
-            if n >= self.net_info.node_num:    # output node
+            if n >= self.net_info.node_num:  # output node
                 in_num = self.net_info.out_in_num[t]
-            else:    # intermediate node
+            else:  # intermediate node
                 in_num = self.net_info.func_in_num[t]
 
             for i in range(in_num):
-                if self.gene[n][i+1] >= self.net_info.input_num:
-                    self.__check_course_to_out(self.gene[n][i+1] - self.net_info.input_num)
+                if self.gene[n][i + 1] >= self.net_info.input_num:
+                    self.__check_course_to_out(self.gene[n][i + 1] - self.net_info.input_num)
 
     def check_active(self):
         # clear
@@ -118,7 +120,7 @@ class Individual(object):
         # start from output nodes
         for n in range(self.net_info.out_num):
             self.__check_course_to_out(self.net_info.node_num + n)
-    
+
     def check_pool(self):
         is_pool = True
         pool_num = 0
@@ -154,7 +156,7 @@ class Individual(object):
             in_num = self.net_info.func_in_num[t] if n < self.net_info.node_num else self.net_info.out_in_num[t]
             for i in range(self.net_info.max_in_num):
                 if np.random.rand() < mutation_rate and max_connect_id - min_connect_id > 1:
-                    self.gene[n][i+1] = self.__mutate(self.gene[n][i+1], min_connect_id, max_connect_id)
+                    self.gene[n][i + 1] = self.__mutate(self.gene[n][i + 1], min_connect_id, max_connect_id)
                     if self.is_active[n] and i < in_num:
                         active_check = True
 
@@ -177,7 +179,7 @@ class Individual(object):
             for i in range(self.net_info.max_in_num):
                 if (not self.is_active[n] or i >= in_num) and np.random.rand() < mutation_rate \
                         and max_connect_id - min_connect_id > 1:
-                    self.gene[n][i+1] = self.__mutate(self.gene[n][i+1], min_connect_id, max_connect_id)
+                    self.gene[n][i + 1] = self.__mutate(self.gene[n][i + 1], min_connect_id, max_connect_id)
 
         self.check_active()
         return False
@@ -199,12 +201,12 @@ class Individual(object):
         for n, is_a in enumerate(self.is_active):
             if is_a:
                 t = self.gene[n][0]
-                if n < self.net_info.node_num:    # intermediate node
+                if n < self.net_info.node_num:  # intermediate node
                     type_str = self.net_info.func_type[t]
-                else:    # output node
+                else:  # output node
                     type_str = self.net_info.out_type[t]
 
-                connections = [active_cnt[self.gene[n][i+1]] for i in range(self.net_info.max_in_num)]
+                connections = [active_cnt[self.gene[n][i + 1]] for i in range(self.net_info.max_in_num)]
                 net_list.append([type_str] + connections)
         return net_list
 
@@ -239,7 +241,8 @@ class CGP(object):
         return evaluations
 
     def _log_data(self, net_info_type='active_only', start_time=0):
-        log_list = [self.num_gen, self.num_eval, time.time()-start_time, self.pop[0].eval, self.pop[0].count_active_node()]
+        log_list = [self.num_gen, self.num_eval, time.time() - start_time, self.pop[0].eval,
+                    self.pop[0].count_active_node()]
         if net_info_type == 'active_only':
             log_list.append(self.pop[0].active_net_list())
         elif net_info_type == 'full':
@@ -249,7 +252,7 @@ class CGP(object):
         return log_list
 
     def _log_data_children(self, net_info_type='active_only', start_time=0, pop=None):
-        log_list = [self.num_gen, self.num_eval, time.time()-start_time, pop.eval, pop.count_active_node()]
+        log_list = [self.num_gen, self.num_eval, time.time() - start_time, pop.eval, pop.count_active_node()]
         if net_info_type == 'active_only':
             log_list.append(pop.active_net_list())
         elif net_info_type == 'full':
@@ -263,7 +266,8 @@ class CGP(object):
         self.num_eval = log_data[1]
         net_info = self.pop[0].net_info
         self.pop[0].eval = log_data[3]
-        self.pop[0].gene = np.array(log_data[5:]).reshape((net_info.node_num + net_info.out_num, net_info.max_in_num + 1))
+        self.pop[0].gene = np.array(log_data[5:]).reshape(
+            (net_info.node_num + net_info.out_num, net_info.max_in_num + 1))
         self.pop[0].check_active()
 
     # Evolution CGP:
@@ -272,19 +276,19 @@ class CGP(object):
     #     - Mutate the best individual with neutral mutation (unchanging the active nodes)
     #         if the best individual is not updated.
     def modified_evolution(self, max_eval=100, mutation_rate=0.01, log_file='./log.txt', arch_file='./arch.txt'):
-        with open('child.txt', 'w') as fw_c :
+        with open('child.txt', 'w') as fw_c:
             writer_c = csv.writer(fw_c, lineterminator='\n')
             start_time = time.time()
             eval_flag = np.empty(self.lam)
             active_num = self.pop[0].count_active_node()
-            _, pool_num= self.pop[0].check_pool()
+            _, pool_num = self.pop[0].check_pool()
             if self.init:
                 pass
-            else: # in the case of not using an init indiviudal
+            else:  # in the case of not using an init indiviudal
                 while active_num < self.pop[0].net_info.min_active_num or pool_num > self.max_pool_num:
                     self.pop[0].mutation(1.0)
                     active_num = self.pop[0].count_active_node()
-                    _, pool_num= self.pop[0].check_pool()
+                    _, pool_num = self.pop[0].check_pool()
             self._evaluation([self.pop[0]], np.array([True]))
             print(self._log_data(net_info_type='active_only', start_time=start_time))
 
@@ -295,13 +299,14 @@ class CGP(object):
                     eval_flag[i] = False
                     self.pop[i + 1].copy(self.pop[0])  # copy a parent
                     active_num = self.pop[i + 1].count_active_node()
-                    _, pool_num= self.pop[i + 1].check_pool()
+                    _, pool_num = self.pop[i + 1].check_pool()
                     # mutation (forced mutation)
-                    while not eval_flag[i] or active_num < self.pop[i + 1].net_info.min_active_num or pool_num > self.max_pool_num:
-                        self.pop[i + 1].copy(self.pop[0])                       # copy a parent
+                    while not eval_flag[i] or active_num < self.pop[
+                        i + 1].net_info.min_active_num or pool_num > self.max_pool_num:
+                        self.pop[i + 1].copy(self.pop[0])  # copy a parent
                         eval_flag[i] = self.pop[i + 1].mutation(mutation_rate)  # mutation
                         active_num = self.pop[i + 1].count_active_node()
-                        _, pool_num= self.pop[i + 1].check_pool()
+                        _, pool_num = self.pop[i + 1].check_pool()
 
                 # evaluation and selection
                 evaluations = self._evaluation(self.pop[1:], eval_flag=eval_flag)
@@ -310,8 +315,10 @@ class CGP(object):
                 f = open('arch_child.txt', 'a')
                 writer_f = csv.writer(f, lineterminator='\n')
                 for c in range(1 + self.lam):
-                    writer_c.writerow(self._log_data_children(net_info_type='full', start_time=start_time, pop=self.pop[c]))
-                    writer_f.writerow(self._log_data_children(net_info_type='active_only', start_time=start_time, pop=self.pop[c]))
+                    writer_c.writerow(
+                        self._log_data_children(net_info_type='full', start_time=start_time, pop=self.pop[c]))
+                    writer_f.writerow(
+                        self._log_data_children(net_info_type='active_only', start_time=start_time, pop=self.pop[c]))
                 f.close()
                 # replace the parent by the best individual
                 if evaluations[best_arg] > self.pop[0].eval:

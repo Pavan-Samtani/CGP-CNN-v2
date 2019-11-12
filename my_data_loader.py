@@ -58,8 +58,8 @@ def get_train_valid_loader(data_dir,
 
     # define transforms
     valid_transform = transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
+        transforms.ToTensor(),
+        normalize,
     ])
     if augment:
         train_transform = transforms.Compose([

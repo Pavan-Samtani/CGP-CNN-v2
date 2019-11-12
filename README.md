@@ -11,10 +11,10 @@ Proceedings of the Genetic and Evolutionary Computation Conference (GECCO '17, B
 ## Requirement
 We use the [PyTorch](https://pytorch.org/) framework for neural networks and tested on the following environment:
 
-* PyTorch version 0.2.0_4
-* Python version 3.6.2
-* CUDA version 8.0
-* Ubuntu 14.04 LTS
+* PyTorch version 1.3.0
+* Python version 3.7.4
+* CUDA version 10.1
+* Manjaro-18.1.2
 
 ## Usage
 

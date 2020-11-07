@@ -16,6 +16,7 @@ from torch.nn import init
 
 from cnn_model import CGP2CNN
 from my_data_loader import get_train_valid_loader
+from datasets import CIFAR10Red
 
 
 def weights_init(m):
@@ -100,7 +101,7 @@ def init_weights(net, init_type='normal'):
 # __init__: load dataset
 # __call__: training the CNN defined by CGP list
 class CNN_train():
-    def __init__(self, dataset_name, validation=True, verbose=True, imgSize=32, batchsize=128):
+    def __init__(self, dataset_name, reduced=False, validation=True, verbose=True, imgSize=32, batchsize=128):
         # dataset_name: name of data set ('bsds'(color) or 'bsds_gray')
         # validation: [True]  model train/validation mode
         #             [False] model test mode for final evaluation of the evolved model
@@ -119,23 +120,41 @@ class CNN_train():
             if self.validation:
                 self.dataloader, self.test_dataloader = get_train_valid_loader(data_dir='./',
                                                                                batch_size=self.batchsize,
-                                                                               augment=True, random_seed=2018,
-                                                                               num_workers=1, pin_memory=True)
+                                                                               augment=True, reduced=reduced,
+                                                                               random_seed=2018, num_workers=1, 
+                                                                               pin_memory=True)
                 # self.dataloader, self.test_dataloader = loaders[0], loaders[1]
             else:
-                train_dataset = dset.CIFAR10(root='./', train=True, download=True,
-                                             transform=transforms.Compose([
-                                                 transforms.RandomHorizontalFlip(),
-                                                 transforms.Scale(self.imgSize),
-                                                 transforms.ToTensor(),
-                                                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                                             ]))
-                test_dataset = dset.CIFAR10(root='./', train=False, download=True,
-                                            transform=transforms.Compose([
-                                                transforms.Scale(self.imgSize),
-                                                transforms.ToTensor(),
-                                                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                                            ]))
+            
+                if not reduced:
+                    train_dataset = dset.CIFAR10(root='./', train=True, download=True,
+                                                 transform=transforms.Compose([
+                                                     transforms.RandomHorizontalFlip(),
+                                                     transforms.Scale(self.imgSize),
+                                                     transforms.ToTensor(),
+                                                     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                                                 ]))
+                    test_dataset = dset.CIFAR10(root='./', train=False, download=True,
+                                                transform=transforms.Compose([
+                                                    transforms.Scale(self.imgSize),
+                                                    transforms.ToTensor(),
+                                                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                                                ]))
+                else:
+                    train_dataset = CIFAR10Red(root='./', train=True, download=True,
+                                               transform=transforms.Compose([
+                                                   transforms.RandomHorizontalFlip(),
+                                                   transforms.Scale(self.imgSize),
+                                                   transforms.ToTensor(),
+                                                   transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                                               ]))
+                    test_dataset = CIFAR10Red(root='./', train=False, download=True,
+                                              transform=transforms.Compose([
+                                                  transforms.Scale(self.imgSize),
+                                                  transforms.ToTensor(),
+                                                  transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                                              ]))
+                
                 self.dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=self.batchsize,
                                                               shuffle=True, num_workers=int(2))
                 self.test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=self.batchsize,

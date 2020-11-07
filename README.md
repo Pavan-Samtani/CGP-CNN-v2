@@ -15,6 +15,7 @@ We use the [PyTorch](https://pytorch.org/) framework for neural networks and tes
 * Python version 3.7.4
 * CUDA version 10.1
 * Manjaro-18.1.2
+* pftlops
 
 ## Usage
 

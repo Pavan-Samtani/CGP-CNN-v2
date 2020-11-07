@@ -6,6 +6,8 @@ import time
 import numpy as np
 import math
 
+from ptflops import get_model_complexity_info
+
 
 # gene[f][c] f:function type, c:connection (nodeID)
 class Individual(object):
@@ -16,6 +18,7 @@ class Individual(object):
         self.is_active = np.empty(self.net_info.node_num + self.net_info.out_num).astype(bool)
         self.is_pool = np.empty(self.net_info.node_num + self.net_info.out_num).astype(bool)
         self.eval = None
+        self.macs = None
         if init:
             print('init with specific architectures')
             self.init_gene_with_conv()  # In the case of starting only convolution
@@ -192,6 +195,7 @@ class Individual(object):
         self.gene = source.gene.copy()
         self.is_active = source.is_active.copy()
         self.eval = source.eval
+        self.macs = source.macs
 
     def active_net_list(self):
         net_list = [["input", 0, 0]]
@@ -213,7 +217,7 @@ class Individual(object):
 
 # CGP with (1 + \lambda)-ES
 class CGP(object):
-    def __init__(self, net_info, eval_func, lam=4, imgSize=32, init=False):
+    def __init__(self, net_info, eval_func, lam=4, imgSize=32, init=False, bias=0):
         self.lam = lam
         self.pop = [Individual(net_info, init) for _ in range(1 + self.lam)]
         self.eval_func = eval_func
@@ -221,6 +225,7 @@ class CGP(object):
         self.num_eval = 0
         self.max_pool_num = int(math.log2(imgSize) - 2)
         self.init = init
+        self.bias = 0
 
     def _evaluation(self, pop, eval_flag):
         # create network list
@@ -232,17 +237,20 @@ class CGP(object):
         # evaluation
         fp = self.eval_func(net_lists)
         for i, j in enumerate(active_index):
-            pop[j].eval = fp[i]
-        evaluations = np.zeros(len(pop))
+            pop[j].eval = fp[i][0]
+            pop[j].macs = fp[i][1]
+        evaluations_acc = np.zeros(len(pop))
+        evaluations_macs = np.zeros(len(pop))
         for i in range(len(pop)):
-            evaluations[i] = pop[i].eval
+            evaluations_acc[i] = pop[i].eval
+            evaluations_macs[i] = pop[i].macs
 
         self.num_eval += len(net_lists)
-        return evaluations
+        return evaluations_acc, evaluations_macs
 
     def _log_data(self, net_info_type='active_only', start_time=0):
         log_list = [self.num_gen, self.num_eval, time.time() - start_time, self.pop[0].eval,
-                    self.pop[0].count_active_node()]
+                    self.pop[0].macs, self.pop[0].count_active_node()]
         if net_info_type == 'active_only':
             log_list.append(self.pop[0].active_net_list())
         elif net_info_type == 'full':
@@ -252,7 +260,7 @@ class CGP(object):
         return log_list
 
     def _log_data_children(self, net_info_type='active_only', start_time=0, pop=None):
-        log_list = [self.num_gen, self.num_eval, time.time() - start_time, pop.eval, pop.count_active_node()]
+        log_list = [self.num_gen, self.num_eval, time.time() - start_time, pop.eval, pop.macs, pop.count_active_node()]
         if net_info_type == 'active_only':
             log_list.append(pop.active_net_list())
         elif net_info_type == 'full':
@@ -309,8 +317,9 @@ class CGP(object):
                         _, pool_num = self.pop[i + 1].check_pool()
 
                 # evaluation and selection
-                evaluations = self._evaluation(self.pop[1:], eval_flag=eval_flag)
-                best_arg = evaluations.argmax()
+                evaluations_acc, evaluations_macs = self._evaluation(self.pop[1:], eval_flag=eval_flag)
+                evaluations_argsort = np.argsort(evaluations_acc)
+                best_arg = evaluations_argsort[0]
                 # save
                 f = open('arch_child.txt', 'a')
                 writer_f = csv.writer(f, lineterminator='\n')
@@ -323,6 +332,14 @@ class CGP(object):
                 # replace the parent by the best individual
                 if evaluations[best_arg] > self.pop[0].eval:
                     self.pop[0].copy(self.pop[best_arg + 1])
+                elif self.bias > 0:
+                    found = False
+                    for idx in evaluations_argsort:
+                        if evaluations_acc[idx] > (self.pop[0].eval - self.bias) and \
+                            evaluations_macs[idx] < self.pop[0].macs:
+                            self.pop[0].copy(self.pop[idx + 1])
+                    if not found:
+                        self.pop[0].neutral_mutation(mutation_rate)  # modify the parent (neutral mutation)        
                 else:
                     self.pop[0].neutral_mutation(mutation_rate)  # modify the parent (neutral mutation)
 

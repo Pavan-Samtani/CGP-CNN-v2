@@ -187,6 +187,7 @@ class CNN_train():
         label = label.cuda(gpuID)
 
         # Train loop
+        input_shape = None
         for epoch in range(1, epoch_num + 1):
             start_time = time.time()
             if self.verbose:
@@ -198,6 +199,8 @@ class CNN_train():
             for module in model.children():
                 module.train(True)
             for _, (data, target) in enumerate(self.dataloader):
+                if input_shape is None:
+                    input_shape = list(data.size)
                 data = data.cuda(gpuID)
                 target = target.cuda(gpuID)
                 input.resize_as_(data).copy_(data)
@@ -257,8 +260,10 @@ class CNN_train():
                     for param_group in optimizer.param_groups:
                         param_group['lr'] = tmp
         # save the model
+        macs, __ = get_model_complexity_info(model, tuple(input_shape[1:]), as_strings=True,
+                                             print_per_layer_stat=True, verbose=True)
         torch.save(model.state_dict(), './model_%d.pth' % int(gpuID))
-        return t_loss
+        return t_loss, macs
 
     # For validation/test
     def __test_per_std(self, model, criterion, gpuID, input, label):

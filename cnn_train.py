@@ -159,8 +159,8 @@ class CNN_train():
                                                               shuffle=True, num_workers=int(2))
                 self.test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=self.batchsize,
                                                                    shuffle=True, num_workers=int(2))
-        print('train num    ', len(self.dataloader.dataset))
-        # print('test num     ', len(self.test_dataloader.dataset))
+            print('train num    ', len(self.dataloader.dataset))
+            # print('test num     ', len(self.test_dataloader.dataset))
         else:
             print('\tInvalid input dataset name at CNN_train()')
             exit(1)
@@ -267,8 +267,6 @@ class CNN_train():
         correct = 0
         ite = 0
         for _, (data, target) in enumerate(self.test_dataloader):
-            if self.dataset_name == 'mnsit':
-                data = data[:, 0:1, :, :]
             data = data.cuda(gpuID)
             target = target.cuda(gpuID)
             input.resize_as_(data).copy_(data)

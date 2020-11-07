@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', '-m', default='evolution', help='Mode (evolution / retrain / reevolution)')
     parser.add_argument('--init', '-i', action='store_true')
     parser.add_argument('--reduced', '-r', action='store_true', help="Whether to use reduced dataset version")
-    parser.add_argument('--bias', '-b', default=0, type=floar, 
+    parser.add_argument('--bias', '-b', default=0, type=float, 
                         help="Keep individual at least with (parent - bias) % accuracy if lesser macs")
     args = parser.parse_args()
 

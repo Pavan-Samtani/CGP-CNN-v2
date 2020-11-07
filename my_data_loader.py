@@ -7,6 +7,7 @@ import torch
 import numpy as np
 
 from utils import plot_images
+from datasets import CIFAR10Red
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -88,12 +89,12 @@ def get_train_valid_loader(data_dir,
         )
         
     else:
-        train_dataset = datasets.CIFAR10Red(
+        train_dataset = CIFAR10Red(
             root=data_dir, train=True,
             download=True, transform=train_transform,
         )
 
-        valid_dataset = datasets.CIFAR10Red(
+        valid_dataset = CIFAR10Red(
             root=data_dir, train=True,
             download=True, transform=valid_transform,
         )

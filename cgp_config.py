@@ -30,20 +30,21 @@ class NoDaemonProcessPool(multiprocessing.pool.Pool):
 
 
 # Evaluation of CNNs
-def cnn_eval(net, gpu_id, epoch_num, batchsize, dataset, verbose, imgSize):
+def cnn_eval(net, gpu_id, epoch_num, batchsize, dataset, reduced, verbose, imgSize):
     print('\tgpu_id:', gpu_id, ',', net)
-    train = cnn.CNN_train(dataset, validation=True, verbose=verbose, imgSize=imgSize, batchsize=batchsize)
+    train = cnn.CNN_train(dataset, reduced=reduced, validation=True, verbose=verbose, imgSize=imgSize, batchsize=batchsize)
     evaluation = train(net, gpu_id, epoch_num=epoch_num, out_model=None)
     print('\tgpu_id:', gpu_id, ', eval:', evaluation)
     return evaluation
 
 
 class CNNEvaluation(object):
-    def __init__(self, gpu_num, dataset='cifar10', verbose=True, epoch_num=50, batchsize=16, imgSize=32):
+    def __init__(self, gpu_num, dataset='cifar10', reduced=False, verbose=True, epoch_num=50, batchsize=16, imgSize=32):
         self.gpu_num = gpu_num
         self.epoch_num = epoch_num
         self.batchsize = batchsize
         self.dataset = dataset
+        self.reduced = reduced
         self.verbose = verbose
         self.imgSize = imgSize
 
@@ -52,7 +53,7 @@ class CNNEvaluation(object):
         for i in np.arange(0, len(net_lists), self.gpu_num):
             process_num = np.min((i + self.gpu_num, len(net_lists))) - i
             pool = NoDaemonProcessPool(process_num)
-            arg_data = [(cnn_eval, net_lists[i + j], j, self.epoch_num, self.batchsize, self.dataset, self.verbose,
+            arg_data = [(cnn_eval, net_lists[i + j], j, self.epoch_num, self.batchsize, self.dataset, self.reduced, self.verbose,
                          self.imgSize) for j in range(process_num)]
             evaluations[i:i + process_num] = pool.map(arg_wrapper_mp, arg_data)
             pool.terminate()

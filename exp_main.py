@@ -19,6 +19,8 @@ if __name__ == '__main__':
     parser.add_argument('--mode', '-m', default='evolution', help='Mode (evolution / retrain / reevolution)')
     parser.add_argument('--init', '-i', action='store_true')
     parser.add_argument('--reduced', '-r', action='store_true', help="Whether to use reduced dataset version")
+    parser.add_argument('--bias', '-b', default=0, type=float, 
+                        help="Keep individual at least with (parent - bias) % accuracy if lesser macs")
     args = parser.parse_args()
 
     # --- Optimization of the CNN architecture ---
@@ -33,7 +35,7 @@ if __name__ == '__main__':
                                batchsize=128, imgSize=imgSize)
 
         # Execute evolution
-        cgp = CGP(network_info, eval_f, lam=args.lam, imgSize=imgSize, init=args.init)
+        cgp = CGP(network_info, eval_f, lam=args.lam, imgSize=imgSize, init=args.init, bias=args.bias)
         cgp.modified_evolution(max_eval=250, mutation_rate=0.1, log_file=args.log_file)
 
     # --- Retraining evolved architecture ---
@@ -50,8 +52,8 @@ if __name__ == '__main__':
         print(cgp._log_data(net_info_type='active_only', start_time=0))
         # Retraining the network
         temp = CNN_train('cifar10', reduced=args.reduced, validation=False, verbose=True, batchsize=128)
-        acc = temp(cgp.pop[0].active_net_list(), 0, epoch_num=500, out_model='retrained_net.model')
-        print(acc)
+        acc, macs = temp(cgp.pop[0].active_net_list(), 0, epoch_num=500, out_model='retrained_net.model')
+        print(acc, macs)
 
         # # otherwise (in the case where we do not have a log file.)
         # temp = CNN_train('haze1', validation=False, verbose=True, imgSize=128, batchsize=16)
@@ -66,7 +68,7 @@ if __name__ == '__main__':
             network_info = pickle.load(f)
         eval_f = CNNEvaluation(gpu_num=args.gpu_num, dataset='cifar10', reduced=args.reduced, verbose=True, epoch_num=50, batchsize=128,
                                imgSize=imgSize)
-        cgp = CGP(network_info, eval_f, lam=args.lam, imgSize=imgSize)
+        cgp = CGP(network_info, eval_f, lam=args.lam, imgSize=imgSize, bias=args.bias)
 
         data = pd.read_csv('./log_cgp.txt', header=None)
         cgp.load_log(list(data.tail(1).values.flatten().astype(int)))

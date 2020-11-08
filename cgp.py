@@ -5,6 +5,7 @@ import csv
 import time
 import numpy as np
 import math
+import os
 
 
 # gene[f][c] f:function type, c:connection (nodeID)
@@ -285,8 +286,8 @@ class CGP(object):
     #     - Generate lambda individuals in which at least one active node changes (i.e., forced mutation)
     #     - Mutate the best individual with neutral mutation (unchanging the active nodes)
     #         if the best individual is not updated.
-    def modified_evolution(self, max_eval=100, mutation_rate=0.01, log_file='./log.txt', arch_file='./arch.txt'):
-        with open('child.txt', 'w') as fw_c:
+    def modified_evolution(self, max_eval=100, mutation_rate=0.01, log_path='./'):
+        with open(os.path.join(log_path, 'child.txt'), 'a') as fw_c:
             writer_c = csv.writer(fw_c, lineterminator='\n')
             start_time = time.time()
             eval_flag = np.empty(self.lam)
@@ -320,10 +321,11 @@ class CGP(object):
 
                 # evaluation and selection
                 evaluations_acc, evaluations_size = self._evaluation(self.pop[1:], eval_flag=eval_flag)
-                evaluations_argsort = np.argsort(evaluations_acc)
+                evaluations_argsort = np.argsort(-evaluations_acc)
+                print(evaluations_acc, evaluations_argsort)
                 best_arg = evaluations_argsort[0]
                 # save
-                f = open('arch_child.txt', 'a')
+                f = open(os.path.join(log_path, 'arch_child.txt'), 'a')
                 writer_f = csv.writer(f, lineterminator='\n')
                 for c in range(1 + self.lam):
                     writer_c.writerow(
@@ -332,6 +334,8 @@ class CGP(object):
                         self._log_data_children(net_info_type='active_only', start_time=start_time, pop=self.pop[c]))
                 f.close()
                 # replace the parent by the best individual
+                print("Comparing children with parent...")
+                print(f"Best Child's Accuracy {evaluations_acc[best_arg]}, Parent Accuracy: {self.pop[0].eval}")
                 if evaluations_acc[best_arg] > self.pop[0].eval:
                     self.pop[0].copy(self.pop[best_arg + 1])
                 elif self.bias > 0:
@@ -347,10 +351,10 @@ class CGP(object):
 
                 # display and save log
                 print(self._log_data(net_info_type='active_only', start_time=start_time))
-                fw = open(log_file, 'a')
+                fw = open(os.path.join(log_path, 'log_cgp.txt'), 'a')
                 writer = csv.writer(fw, lineterminator='\n')
                 writer.writerow(self._log_data(net_info_type='full', start_time=start_time))
-                fa = open('arch.txt', 'a')
+                fa = open(os.path.join(log_path, 'arch.txt'), 'a')
                 writer_a = csv.writer(fa, lineterminator='\n')
                 writer_a.writerow(self._log_data(net_info_type='active_only', start_time=start_time))
                 fw.close()

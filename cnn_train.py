@@ -259,7 +259,7 @@ class CNN_train():
         # save the model
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         torch.save(model.state_dict(), './model_%d.pth' % int(gpuID))
-        return t_loss, num_params
+        return float(t_loss), num_params
 
     # For validation/test
     def __test_per_std(self, model, criterion, gpuID, input, label):

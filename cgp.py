@@ -6,8 +6,6 @@ import time
 import numpy as np
 import math
 
-from ptflops import get_model_complexity_info
-
 
 # gene[f][c] f:function type, c:connection (nodeID)
 class Individual(object):
@@ -18,7 +16,7 @@ class Individual(object):
         self.is_active = np.empty(self.net_info.node_num + self.net_info.out_num).astype(bool)
         self.is_pool = np.empty(self.net_info.node_num + self.net_info.out_num).astype(bool)
         self.eval = None
-        self.macs = None
+        self.size = None
         if init:
             print('init with specific architectures')
             self.init_gene_with_conv()  # In the case of starting only convolution
@@ -195,7 +193,7 @@ class Individual(object):
         self.gene = source.gene.copy()
         self.is_active = source.is_active.copy()
         self.eval = source.eval
-        self.macs = source.macs
+        self.size = source.size
 
     def active_net_list(self):
         net_list = [["input", 0, 0]]
@@ -237,20 +235,24 @@ class CGP(object):
         # evaluation
         fp = self.eval_func(net_lists)
         for i, j in enumerate(active_index):
-            pop[j].eval = fp[i][0]
-            pop[j].macs = fp[i][1]
+            if isinstance(fp[i], tuple):
+                pop[j].eval = fp[i][0]
+                pop[j].size = fp[i][1]
+            else:
+                pop[j].eval = fp[i]
+                pop[j].size = np.inf
         evaluations_acc = np.zeros(len(pop))
-        evaluations_macs = np.zeros(len(pop))
+        evaluations_size = np.zeros(len(pop))
         for i in range(len(pop)):
             evaluations_acc[i] = pop[i].eval
-            evaluations_macs[i] = pop[i].macs
+            evaluations_size[i] = pop[i].size
 
         self.num_eval += len(net_lists)
-        return evaluations_acc, evaluations_macs
+        return evaluations_acc, evaluations_size
 
     def _log_data(self, net_info_type='active_only', start_time=0):
         log_list = [self.num_gen, self.num_eval, time.time() - start_time, self.pop[0].eval,
-                    self.pop[0].macs, self.pop[0].count_active_node()]
+                    self.pop[0].size, self.pop[0].count_active_node()]
         if net_info_type == 'active_only':
             log_list.append(self.pop[0].active_net_list())
         elif net_info_type == 'full':
@@ -260,7 +262,7 @@ class CGP(object):
         return log_list
 
     def _log_data_children(self, net_info_type='active_only', start_time=0, pop=None):
-        log_list = [self.num_gen, self.num_eval, time.time() - start_time, pop.eval, pop.macs, pop.count_active_node()]
+        log_list = [self.num_gen, self.num_eval, time.time() - start_time, pop.eval, pop.size, pop.count_active_node()]
         if net_info_type == 'active_only':
             log_list.append(pop.active_net_list())
         elif net_info_type == 'full':
@@ -317,7 +319,7 @@ class CGP(object):
                         _, pool_num = self.pop[i + 1].check_pool()
 
                 # evaluation and selection
-                evaluations_acc, evaluations_macs = self._evaluation(self.pop[1:], eval_flag=eval_flag)
+                evaluations_acc, evaluations_size = self._evaluation(self.pop[1:], eval_flag=eval_flag)
                 evaluations_argsort = np.argsort(evaluations_acc)
                 best_arg = evaluations_argsort[0]
                 # save
@@ -330,13 +332,13 @@ class CGP(object):
                         self._log_data_children(net_info_type='active_only', start_time=start_time, pop=self.pop[c]))
                 f.close()
                 # replace the parent by the best individual
-                if evaluations[best_arg] > self.pop[0].eval:
+                if evaluations_acc[best_arg] > self.pop[0].eval:
                     self.pop[0].copy(self.pop[best_arg + 1])
                 elif self.bias > 0:
                     found = False
                     for idx in evaluations_argsort:
                         if evaluations_acc[idx] > (self.pop[0].eval - self.bias) and \
-                            evaluations_macs[idx] < self.pop[0].macs:
+                            evaluations_size[idx] < self.pop[0].size:
                             self.pop[0].copy(self.pop[idx + 1])
                     if not found:
                         self.pop[0].neutral_mutation(mutation_rate)  # modify the parent (neutral mutation)        

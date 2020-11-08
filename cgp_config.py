@@ -49,13 +49,15 @@ class CNNEvaluation(object):
         self.imgSize = imgSize
 
     def __call__(self, net_lists):
-        evaluations = np.zeros(len(net_lists))
+        evaluations = []
         for i in np.arange(0, len(net_lists), self.gpu_num):
             process_num = np.min((i + self.gpu_num, len(net_lists))) - i
             pool = NoDaemonProcessPool(process_num)
             arg_data = [(cnn_eval, net_lists[i + j], j, self.epoch_num, self.batchsize, self.dataset, self.reduced, self.verbose,
                          self.imgSize) for j in range(process_num)]
-            evaluations[i:i + process_num] = pool.map(arg_wrapper_mp, arg_data)
+            out = pool.map(arg_wrapper_mp, arg_data)
+            for j in range(process_num):
+                evaluations.append(out[j])
             pool.terminate()
 
         return evaluations

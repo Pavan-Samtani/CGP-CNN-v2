@@ -224,7 +224,7 @@ class CGP(object):
         self.num_eval = 0
         self.max_pool_num = int(math.log2(imgSize) - 2)
         self.init = init
-        self.bias = 0
+        self.bias = bias
 
     def _evaluation(self, pop, eval_flag):
         # create network list
@@ -338,12 +338,18 @@ class CGP(object):
                 print(f"Best Child's Accuracy {evaluations_acc[best_arg]}, Parent Accuracy: {self.pop[0].eval}")
                 if evaluations_acc[best_arg] > self.pop[0].eval:
                     self.pop[0].copy(self.pop[best_arg + 1])
+                    print("Replacing parent with best child")
                 elif self.bias > 0:
                     found = False
-                    for idx in evaluations_argsort:
+                    print(f"Parent: Accuracy: {self.pop[0].eval}, Size: {self.pop[0].size}")
+                    for i, idx in enumerate(evaluations_argsort):
+                        print(f"Child {i + 1}: Accuracy: {evaluations_acc[idx]}, Size: {evaluations_size[idx]}")
                         if evaluations_acc[idx] > (self.pop[0].eval - self.bias) and \
                             evaluations_size[idx] < self.pop[0].size:
+                            print("Replacing parent with child")
                             self.pop[0].copy(self.pop[idx + 1])
+                            found = True
+                            break
                     if not found:
                         self.pop[0].neutral_mutation(mutation_rate)  # modify the parent (neutral mutation)        
                 else:

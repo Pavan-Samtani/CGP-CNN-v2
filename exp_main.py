@@ -35,7 +35,7 @@ if __name__ == '__main__':
                                batchsize=128, imgSize=imgSize)
 
         # Execute evolution
-        cgp = CGP(network_info, eval_f, lam=args.lam, imgSize=imgSize, init=args.init)
+        cgp = CGP(network_info, eval_f, lam=args.lam, imgSize=imgSize, init=args.init, bias=args.bias)
         cgp.modified_evolution(max_eval=250, mutation_rate=0.1, log_path=args.log_path)
 
     # --- Retraining evolved architecture ---

@@ -277,7 +277,7 @@ class CGP(object):
         self.num_eval = log_data[1]
         net_info = self.pop[0].net_info
         self.pop[0].eval = log_data[3]
-        self.pop[0].gene = np.array(log_data[5:]).reshape(
+        self.pop[0].gene = np.array(log_data[6:]).reshape(
             (net_info.node_num + net_info.out_num, net_info.max_in_num + 1))
         self.pop[0].check_active()
 

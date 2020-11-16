@@ -21,6 +21,9 @@ if __name__ == '__main__':
     parser.add_argument('--reduced', '-r', action='store_true', help="Whether to use reduced dataset version")
     parser.add_argument('--bias', '-b', default=0, type=float, 
                         help="Keep individual at least with (parent - bias) % accuracy if lesser macs")
+    parser.add_argument('--epoch_load', '-e', type=int, default=0, 
+                        help="In retrain mode, specifies with epoch to load for, default last")
+                                                
     args = parser.parse_args()
 
     # --- Optimization of the CNN architecture ---
@@ -43,12 +46,12 @@ if __name__ == '__main__':
         print('Retrain')
         # In the case of existing log_cgp.txt
         # Load CGP configuration
-        with open(os.path.join(args.log_path, 'model_info.pkl'), mode='rb') as f:
+        with open(os.path.join(args.log_path, 'network_info.pkl'), mode='rb') as f:
             network_info = pickle.load(f)
         # Load network architecture
         cgp = CGP(network_info, None)
-        data = pd.read_csv(os.path.join(args.log_path, 'log_cpg.txt'), header=None)  # Load log file
-        cgp.load_log(list(data.tail(1).values.flatten().astype(int)))  # Read the log at final generation
+        data = pd.read_csv(os.path.join(args.log_path, 'log_cgp.txt'), header=None)  # Load log file
+        cgp.load_log(list(data.iloc[[args.epoch_load - 1]].values.flatten().astype(int)))  # Read the log at final generation
         print(cgp._log_data(net_info_type='active_only', start_time=0))
         # Retraining the network
         temp = CNN_train('cifar10', reduced=args.reduced, validation=False, verbose=True, batchsize=128)
@@ -63,7 +66,7 @@ if __name__ == '__main__':
     elif args.mode == 'reevolution':
         # restart evolution
         print('Restart Evolution')
-        imgSize = 64
+        imgSize = 32
         with open(os.path.join(args.log_path, 'network_info.pkl'), mode='rb') as f:
             network_info = pickle.load(f)
         eval_f = CNNEvaluation(gpu_num=args.gpu_num, dataset='cifar10', reduced=args.reduced, verbose=True, epoch_num=50, batchsize=128,

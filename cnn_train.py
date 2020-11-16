@@ -237,7 +237,7 @@ class CNN_train():
                 if epoch == 5:
                     for param_group in optimizer.param_groups:
                         tmp = param_group['lr']
-                    tmp *= 10
+                    tmp *= 0.1
                     for param_group in optimizer.param_groups:
                         param_group['lr'] = tmp
                 if epoch % 10 == 0:

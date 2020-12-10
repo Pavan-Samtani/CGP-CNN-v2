@@ -5,6 +5,7 @@ import math
 import sys
 from collections import OrderedDict
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,10 +13,13 @@ from torch.autograd import Variable
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_size, out_size, kernel, stride):
+    def __init__(self, in_size, out_size, kernel, stride, bias=False, pad=True):
         super(ConvBlock, self).__init__()
-        pad_size = kernel // 2
-        self.conv1 = nn.Sequential(nn.Conv2d(in_size, out_size, kernel, stride=stride, padding=pad_size, bias=False),
+        if isinstance(kernel, tuple):
+            pad_size = tuple(np.array(kernel) // 2) if pad else 0
+        else:
+            pad_size = kernel // 2 if pad else 0
+        self.conv1 = nn.Sequential(nn.Conv2d(in_size, out_size, kernel, stride=stride, padding=pad_size, bias=bias),
                                    nn.BatchNorm2d(out_size),
                                    nn.ReLU(inplace=True), )
 
@@ -132,6 +136,171 @@ class ResBlock(nn.Module):
         return self.relu(out)
 
 
+class InceptionResA(nn.Module):
+    def __init__(self, in_size):
+        super(InceptionResA, self).__init__()
+        self.in_size = in_size
+        self.relu = nn.ReLU(inplace=False)
+        
+        self.conv_1 = nn.Sequential(
+            ConvBlock(in_size, 32, kernel=1, stride=1, bias=True),
+        )
+        
+        self.conv_2 = nn.Sequential(
+            ConvBlock(in_size, 32, kernel=1, stride=1, bias=True),
+            ConvBlock(32, 32, kernel=3, stride=1, bias=True),
+        )
+        
+        self.conv_3 = nn.Sequential(
+            ConvBlock(in_size, 32, kernel=1, stride=1, bias=True),
+            ConvBlock(32, 48, kernel=3, stride=1, bias=True),
+            ConvBlock(48, 64, kernel=3, stride=1, bias=True),
+        )
+        
+        self.conv_last = nn.Sequential(
+            ConvBlock(128, in_size, kernel=1, stride=1, bias=True),
+        )
+        
+    def forward(self, x):
+        x = self.relu(x)
+        x1 = self.conv_1(x)
+        x2 = self.conv_2(x)
+        x3 = self.conv_3(x)
+        out = torch.cat([x1, x2, x3], dim=1)
+        conv_out_l = self.conv_last(out) 
+        out = self.relu(x + conv_out_l)
+        assert(out.size() == x.size())
+        return out
+
+
+class InceptionResB(nn.Module):
+    def __init__(self, in_size):
+        super(InceptionResB, self).__init__()
+        self.in_size = in_size
+        self.relu = nn.ReLU(inplace=False)
+        
+        self.conv_1 = nn.Sequential(
+            ConvBlock(in_size, 192, kernel=1, stride=1, bias=True),
+        )
+        
+        self.conv_2 = nn.Sequential(
+            ConvBlock(in_size, 128, kernel=1, stride=1, bias=True),
+            ConvBlock(128, 160, kernel=(1, 7), stride=1, bias=True),
+            ConvBlock(160, 192, kernel=(7, 1), stride=1, bias=True),
+        )
+        
+        self.conv_last = nn.Sequential(
+            ConvBlock(384, in_size, kernel=1, stride=1, bias=True),
+        )
+        
+    def forward(self, x):
+        x = self.relu(x)
+        x1 = self.conv_1(x)
+        x2 = self.conv_2(x)
+        out = torch.cat([x1, x2], dim=1)
+        conv_out_l = self.conv_last(out) 
+        out = self.relu(x + conv_out_l)
+        assert(out.size() == x.size())
+        return out
+
+
+class InceptionResC(nn.Module):
+    def __init__(self, in_size):
+        super(InceptionResC, self).__init__()
+        self.in_size = in_size
+        self.relu = nn.ReLU(inplace=False)
+        
+        self.conv_1 = nn.Sequential(
+            ConvBlock(in_size, 192, kernel=1, stride=1, bias=True),
+        )
+        
+        self.conv_2 = nn.Sequential(
+            ConvBlock(in_size, 192, kernel=1, stride=1, bias=True),
+            ConvBlock(192, 224, kernel=(1, 3), stride=1, bias=True),
+            ConvBlock(224, 256, kernel=(3, 1), stride=1, bias=True),
+        )
+        
+        self.conv_last = nn.Sequential(
+            ConvBlock(448, in_size, kernel=1, stride=1, bias=True),
+        )
+        
+    def forward(self, x):
+        x = self.relu(x)
+        x1 = self.conv_1(x)
+        x2 = self.conv_2(x)
+        out = torch.cat([x1, x2], dim=1)
+        conv_out_l = self.conv_last(out) 
+        out = self.relu(x + conv_out_l)
+        assert(out.size() == x.size())
+        return out
+
+
+class InceptionResDiv1(nn.Module):
+    def __init__(self, in_size):
+        super(InceptionResDiv1, self).__init__()
+        self.in_size = in_size
+        self.relu = nn.ReLU(inplace=False)
+        
+        self.block_1 = nn.Sequential(
+            nn.MaxPool2d(3, 2),
+        )
+        
+        self.block_2 = nn.Sequential(
+            ConvBlock(in_size, 256, kernel=1, stride=1),
+            ConvBlock(256, 384, kernel=3, stride=2, bias=True, pad=False),
+        )
+        
+        self.block_3 = nn.Sequential(
+            ConvBlock(in_size, 256, kernel=1, stride=1),
+            ConvBlock(256, 288, kernel=3, stride=2, bias=True, pad=False),
+        )
+        
+        self.block_4 = nn.Sequential(
+            ConvBlock(in_size, 256, kernel=1, stride=1),
+            ConvBlock(256, 288, kernel=3, stride=1, bias=True),
+            ConvBlock(288, 320, kernel=3, stride=2, bias=True, pad=False),
+        )
+        
+        
+    def forward(self, x):
+        x1 = self.block_1(x)
+        x2 = self.block_2(x)
+        x3 = self.block_3(x)
+        x4 = self.block_4(x)
+        out = torch.cat([x1, x2, x3, x4], dim=1)
+        
+        return out
+
+
+class InceptionResDiv2(nn.Module):
+    def __init__(self, in_size):
+        super(InceptionResDiv2, self).__init__()
+        self.in_size = in_size
+        self.relu = nn.ReLU(inplace=False)
+        
+        self.block_1 = nn.Sequential(
+            ConvBlock(in_size, 384, kernel=3, stride=2, pad=False),
+        )
+        
+        self.block_2 = nn.Sequential(
+            ConvBlock(in_size, 256, kernel=1, stride=1),
+            ConvBlock(256, 256, kernel=3, stride=1, bias=True),
+            ConvBlock(256, 384, kernel=3, stride=2, bias=True, pad=False),
+        )
+        
+        self.block_3 = nn.Sequential(
+            nn.MaxPool2d(3, 2),
+        )        
+        
+    def forward(self, x):
+        x1 = self.block_1(x)
+        x2 = self.block_2(x)
+        x3 = self.block_3(x)
+        out = torch.cat([x1, x2, x3], dim=1)
+        
+        return out
+
+
 class Sum(nn.Module):
     def __init__(self):
         super(Sum, self).__init__()
@@ -241,7 +410,7 @@ class CGP2CNN(nn.Module):
                         self.channel_num[i] = out_size
                         self.size[i] = self.size[in1]
                         self.encode.append(ConvBlock(self.channel_num[in1], out_size, kernel, stride=1))
-                    else:
+                    elif func == 'ResBlock':
                         in_data = [out_size, self.channel_num[in1]]
                         small_in_id, large_in_id = (0, 1) if in_data[0] < in_data[1] else (1, 0)
                         self.channel_num[i] = in_data[large_in_id]
@@ -249,19 +418,31 @@ class CGP2CNN(nn.Module):
                         # self.size[i] = self.size[small_in_id]
                         self.size[i] = self.size[in1]
                         self.encode.append(ResBlock(self.channel_num[in1], out_size, kernel, stride=1))
+                    elif func == 'InceptionResA':
+                        self.channel_num[i] = self.channel_num[in1]
+                        self.size[i] = self.size[in1]
+                        self.encode.append(InceptionResA(self.channel_num[in1]))
+                    elif func == 'InceptionResB':
+                        self.channel_num[i] = self.channel_num[in1]
+                        self.size[i] = self.size[in1]
+                        self.encode.append(InceptionResB(self.channel_num[in1]))
+                    elif func == 'InceptionResC':
+                        self.channel_num[i] = self.channel_num[in1]
+                        self.size[i] = self.size[in1]
+                        self.encode.append(InceptionResC(self.channel_num[in1]))
+                    else:
+                        raise ValueError
+                        
                 else:
-                    sys.exit('error')
-                    # if func == 'ConvBlock':
-                    #     self.channel_num[i] = out_size
-                    #     self.size[i] = int(self.size[in1]/2)
-                    #     self.encode.append(ConvBlock(self.channel_num[in1], out_size, kernel, stride=2))
-                    # else:
-                    #     in_data = [out_size, self.channel_num[in2]]
-                    #     small_in_id, large_in_id = (in1, in2) if self.channel_num[in1] < self.channel_num[in2] else (in2, in1)
-                    #     self.channel_num[i] = self.channel_num[large_in_id]
-                    #     small_in_id, large_in_id = (in1, in2) if self.size[in1] < self.size[in2] else (in2, in1)
-                    #     self.size[i] = self.size[small_in_id]
-                    #     self.encode.append(ResBlock(self.channel_num[in1], out_size, kernel, stride=1))
+                    if func == "InceptionResDiv1":
+                        self.channel_num[i] = 992 + self.channel_num[in1]
+                        self.size[i] = int((self.size[in1] - 3) / 2 + 1)
+                        self.encode.append(InceptionResDiv1(self.channel_num[in1]))
+                    elif func == "InceptionResDiv2":
+                        self.channel_num[i] = 768 + self.channel_num[in1]
+                        self.size[i] = int((self.size[in1] - 3) / 2 + 1)
+                        self.encode.append(InceptionResDiv2(self.channel_num[in1]))
+                        
             i += 1
 
         self.layer_module = nn.ModuleList(self.encode)
@@ -276,12 +457,22 @@ class CGP2CNN(nn.Module):
                 outputs[nodeID] = layer(outputs[self.cgp[nodeID][1]])
             elif isinstance(layer, ResBlock):
                 outputs[nodeID] = layer(outputs[self.cgp[nodeID][1]], outputs[self.cgp[nodeID][1]])
+            elif isinstance(layer, InceptionResA):
+                outputs[nodeID] = layer(outputs[self.cgp[nodeID][1]])
+            elif isinstance(layer, InceptionResB):
+                outputs[nodeID] = layer(outputs[self.cgp[nodeID][1]])
+            elif isinstance(layer, InceptionResC):
+                outputs[nodeID] = layer(outputs[self.cgp[nodeID][1]])
             elif isinstance(layer, torch.nn.modules.linear.Linear):
                 tmp = outputs[self.cgp[nodeID][1]].view(outputs[self.cgp[nodeID][1]].size(0), -1)
                 outputs[nodeID] = layer(tmp)
-            elif isinstance(layer, torch.nn.modules.pooling.MaxPool2d) or isinstance(layer,
-                                                                                     torch.nn.modules.pooling.AvgPool2d):
+            elif isinstance(layer, torch.nn.modules.pooling.MaxPool2d) or isinstance(layer, torch.nn.modules.pooling.AvgPool2d):
                 if outputs[self.cgp[nodeID][1]].size(2) > 1:
+                    outputs[nodeID] = layer(outputs[self.cgp[nodeID][1]])
+                else:
+                    outputs[nodeID] = outputs[self.cgp[nodeID][1]]
+            elif isinstance(layer, InceptionResDiv1) or isinstance(layer, InceptionResDiv2):
+                if outputs[self.cgp[nodeID][1]].size(2) > 2:
                     outputs[nodeID] = layer(outputs[self.cgp[nodeID][1]])
                 else:
                     outputs[nodeID] = outputs[self.cgp[nodeID][1]]

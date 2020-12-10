@@ -70,23 +70,23 @@ class CgpInfoConvSet(object):
         # "S_" means that the layer has a convolution layer without downsampling.
         # "D_" means that the layer has a convolution layer with downsampling.
         # "Sum" means that the layer has a skip connection.
-        self.func_type = ['S_ConvBlock_32_1', 'S_ConvBlock_32_3', 'S_ConvBlock_32_5',
-                          'S_ConvBlock_128_1', 'S_ConvBlock_128_3', 'S_ConvBlock_128_5',
-                          'S_ConvBlock_64_1', 'S_ConvBlock_64_3', 'S_ConvBlock_64_5',
-                          'S_ResBlock_32_1', 'S_ResBlock_32_3', 'S_ResBlock_32_5',
-                          'S_ResBlock_128_1', 'S_ResBlock_128_3', 'S_ResBlock_128_5',
-                          'S_ResBlock_64_1', 'S_ResBlock_64_3', 'S_ResBlock_64_5',
-                          'Concat', 'Sum',
+        # self.func_type = ['S_ConvBlock_32_1', 'S_ConvBlock_32_3', 'S_ConvBlock_32_5',
+        #                   'S_ConvBlock_128_1', 'S_ConvBlock_128_3', 'S_ConvBlock_128_5',
+        #                   'S_ConvBlock_64_1', 'S_ConvBlock_64_3', 'S_ConvBlock_64_5',
+        #                   'S_ResBlock_32_1', 'S_ResBlock_32_3', 'S_ResBlock_32_5',
+        #                   'S_ResBlock_128_1', 'S_ResBlock_128_3', 'S_ResBlock_128_5',
+        #                   'S_ResBlock_64_1', 'S_ResBlock_64_3', 'S_ResBlock_64_5',
+        #                   'Concat', 'Sum',
+        #                   'Max_Pool', 'Avg_Pool']
+        self.func_type = ['S_ConvBlock_32_3', 'S_ConvBlock_64_3', 'S_ConvBlock_128_3',
+                          'S_InceptionResA_0_0', 'S_InceptionResB_0_0', 'S_InceptionResC_0_0', 
+                          'D_InceptionResDiv1_0_0', 'D_InceptionResDiv2_0_0', 'Concat', 'Sum',
                           'Max_Pool', 'Avg_Pool']
 
         self.func_in_num = [1, 1, 1,
                             1, 1, 1,
-                            1, 1, 1,
-                            1, 1, 1,
-                            1, 1, 1,
-                            1, 1, 1,
-                            2, 2,
-                            1, 1]
+                            1, 1, 2, 
+                            2, 1, 1]
 
         self.out_num = 1
         self.out_type = ['full']

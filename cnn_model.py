@@ -310,18 +310,18 @@ class Sum(nn.Module):
         # check of the image size
         if (in_data[0].size(2) - in_data[1].size(2)) != 0:
             small_in_id, large_in_id = (0, 1) if in_data[0].size(2) < in_data[1].size(2) else (1, 0)
-            pool_num = math.floor(in_data[large_in_id].size(2) / in_data[small_in_id].size(2))
-            for _ in range(pool_num - 1):
+            pool_num = math.floor(math.log(in_data[large_in_id].size(2) / in_data[small_in_id].size(2)) / math.log(2))
+            for _ in range(pool_num):
                 in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, 0)
             if (in_data[large_in_id].size(2) - in_data[small_in_id].size(2)):
                 pad_size = math.ceil((2 * in_data[small_in_id].size(2) - 
                     in_data[large_in_id].size(2)) / 2)
-                if 2 * pad_size < in_data[small_in_id].size(2) * 0.5:
+                if 2 * pad_size <= in_data[small_in_id].size(2) * 0.5:
                     in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, pad_size)
                 else:
                     large_mp = in_data[large_in_id].size(2) // 2
                     small_hf_1 = in_data[small_in_id].size(2) // 2
-                    small_hf_w = in_data[small_in_id].size(2) - small_hf_2
+                    small_hf_2 = in_data[small_in_id].size(2) - small_hf_1
                     in_data[large_in_id] = in_data[large_in_id][:, :, 
                         large_mp - small_hf_1:large_mp + small_hf_2,
                         large_mp - small_hf_1:large_mp + small_hf_2]
@@ -345,18 +345,18 @@ class Concat(nn.Module):
         # check of the image size
         if (in_data[0].size(2) - in_data[1].size(2)) != 0:
             small_in_id, large_in_id = (0, 1) if in_data[0].size(2) < in_data[1].size(2) else (1, 0)
-            pool_num = math.floor(in_data[large_in_id].size(2) / in_data[small_in_id].size(2))
-            for _ in range(pool_num - 1):
+            pool_num = math.floor(math.log(in_data[large_in_id].size(2) / in_data[small_in_id].size(2)) / math.log(2))
+            for _ in range(pool_num):
                 in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, 0)
             if (in_data[large_in_id].size(2) - in_data[small_in_id].size(2)):
                 pad_size = math.ceil((2 * in_data[small_in_id].size(2) - 
                     in_data[large_in_id].size(2)) / 2)
-                if 2 * pad_size < in_data[small_in_id].size(2) * 0.5:
+                if 2 * pad_size <= in_data[small_in_id].size(2) * 0.5:
                     in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, pad_size)
                 else:
                     large_mp = in_data[large_in_id].size(2) // 2
                     small_hf_1 = in_data[small_in_id].size(2) // 2
-                    small_hf_w = in_data[small_in_id].size(2) - small_hf_2
+                    small_hf_2 = in_data[small_in_id].size(2) - small_hf_1
                     in_data[large_in_id] = in_data[large_in_id][:, :, 
                         large_mp - small_hf_1:large_mp + small_hf_2,
                         large_mp - small_hf_1:large_mp + small_hf_2]
@@ -398,20 +398,26 @@ class CGP2CNN(nn.Module):
         # encoder
         i = 0
         for name, in1, in2 in self.cgp:
+            # if i >= 1: print(i - 1, self.size[i - 1])
             if name == 'input' in name:
                 i += 1
                 continue
             elif name == 'full':
+                # print("val", self.channel_num[in1] * self.size[in1] * self.size[in1])
                 self.encode.append(nn.Linear(self.channel_num[in1] * self.size[in1] * self.size[in1], n_class))
             elif name == 'Max_Pool' or name == 'Avg_Pool':
                 self.channel_num[i] = self.channel_num[in1]
-                self.size[i] = int((self.size[in1] - 3) / 2 + 1)
+                
+                if self.size[in1] < 2:
+                    self.size[i] = self.size[in1]
+                else:
+                    self.size[i] = int(self.size[in1] / 2)
                 key = name.split('_')
                 func = key[0]
                 if func == 'Max':
-                    self.encode.append(nn.MaxPool2d(3, 2))
+                    self.encode.append(nn.MaxPool2d(2, 2))
                 else:
-                    self.encode.append(nn.AvgPool2d(3, 2))
+                    self.encode.append(nn.AvgPool2d(2, 2))
             elif name == 'Concat':
                 self.channel_num[i] = self.channel_num[in1] + self.channel_num[in2]
                 small_in_id, large_in_id = (in1, in2) if self.size[in1] < self.size[in2] else (in2, in1)
@@ -460,11 +466,17 @@ class CGP2CNN(nn.Module):
                 else:
                     if func == "InceptionResDiv1":
                         self.channel_num[i] = 992 + self.channel_num[in1]
-                        self.size[i] = int((self.size[in1] - 3) / 2 + 1)
+                        if self.size[in1] <= 2:
+                            self.size[i] = self.size[in1]
+                        else:
+                            self.size[i] = int((self.size[in1] - 3) / 2 + 1)
                         self.encode.append(InceptionResDiv1(self.channel_num[in1]))
                     elif func == "InceptionResDiv2":
                         self.channel_num[i] = 768 + self.channel_num[in1]
-                        self.size[i] = int((self.size[in1] - 3) / 2 + 1)
+                        if self.size[in1] <= 2:
+                            self.size[i] = self.size[in1]
+                        else:
+                            self.size[i] = int((self.size[in1] - 3) / 2 + 1)
                         self.encode.append(InceptionResDiv2(self.channel_num[in1]))
                         
             i += 1

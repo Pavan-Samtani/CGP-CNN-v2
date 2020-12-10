@@ -313,6 +313,18 @@ class Sum(nn.Module):
             pool_num = math.floor(in_data[large_in_id].size(2) / in_data[small_in_id].size(2))
             for _ in range(pool_num - 1):
                 in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, 0)
+            if (in_data[large_in_id].size(2) - in_data[small_in_id].size(2)):
+                pad_size = math.ceil((2 * in_data[small_in_id].size(2) - 
+                    in_data[large_in_id].size(2)) / 2)
+                if 2 * pad_size < in_data[small_in_id].size(2) * 0.5:
+                    in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, pad_size)
+                else:
+                    large_mp = in_data[large_in_id].size(2) // 2
+                    small_hf_1 = in_data[small_in_id].size(2) // 2
+                    small_hf_w = in_data[small_in_id].size(2) - small_hf_2
+                    in_data[large_in_id] = in_data[large_in_id][:, :, 
+                        large_mp - small_hf_1:large_mp + small_hf_2,
+                        large_mp - small_hf_1:large_mp + small_hf_2]
         # check of the channel size
         small_ch_id, large_ch_id = (0, 1) if in_data[0].size(1) < in_data[1].size(1) else (1, 0)
         offset = int(in_data[large_ch_id].size()[1] - in_data[small_ch_id].size()[1])
@@ -336,6 +348,18 @@ class Concat(nn.Module):
             pool_num = math.floor(in_data[large_in_id].size(2) / in_data[small_in_id].size(2))
             for _ in range(pool_num - 1):
                 in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, 0)
+            if (in_data[large_in_id].size(2) - in_data[small_in_id].size(2)):
+                pad_size = math.ceil((2 * in_data[small_in_id].size(2) - 
+                    in_data[large_in_id].size(2)) / 2)
+                if 2 * pad_size < in_data[small_in_id].size(2) * 0.5:
+                    in_data[large_in_id] = F.max_pool2d(in_data[large_in_id], 2, 2, pad_size)
+                else:
+                    large_mp = in_data[large_in_id].size(2) // 2
+                    small_hf_1 = in_data[small_in_id].size(2) // 2
+                    small_hf_w = in_data[small_in_id].size(2) - small_hf_2
+                    in_data[large_in_id] = in_data[large_in_id][:, :, 
+                        large_mp - small_hf_1:large_mp + small_hf_2,
+                        large_mp - small_hf_1:large_mp + small_hf_2]
         return torch.cat([in_data[0], in_data[1]], 1)
 
 
@@ -381,13 +405,13 @@ class CGP2CNN(nn.Module):
                 self.encode.append(nn.Linear(self.channel_num[in1] * self.size[in1] * self.size[in1], n_class))
             elif name == 'Max_Pool' or name == 'Avg_Pool':
                 self.channel_num[i] = self.channel_num[in1]
-                self.size[i] = int(self.size[in1] / 2)
+                self.size[i] = int((self.size[in1] - 3) / 2 + 1)
                 key = name.split('_')
                 func = key[0]
                 if func == 'Max':
-                    self.encode.append(nn.MaxPool2d(2, 2))
+                    self.encode.append(nn.MaxPool2d(3, 2))
                 else:
-                    self.encode.append(nn.AvgPool2d(2, 2))
+                    self.encode.append(nn.AvgPool2d(3, 2))
             elif name == 'Concat':
                 self.channel_num[i] = self.channel_num[in1] + self.channel_num[in2]
                 small_in_id, large_in_id = (in1, in2) if self.size[in1] < self.size[in2] else (in2, in1)

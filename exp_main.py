@@ -51,7 +51,7 @@ if __name__ == '__main__':
         # Load network architecture
         cgp = CGP(network_info, None)
         data = pd.read_csv(os.path.join(args.log_path, 'log_cgp.txt'), header=None)  # Load log file
-        cgp.load_log(list(data.iloc[[args.epoch_load - 1]].values.flatten().astype(int)))  # Read the log at final generation
+        cgp.load_log(list(data.iloc[[args.epoch_load - 1]].values.flatten().astype(float)))  # Read the log at final generation
         print(cgp._log_data(net_info_type='active_only', start_time=0))
         # Retraining the network
         temp = CNN_train('cifar10', reduced=args.reduced, validation=False, verbose=True, batchsize=128)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         cgp = CGP(network_info, eval_f, lam=args.lam, imgSize=imgSize, bias=args.bias)
 
         data = pd.read_csv(os.path.join(args.log_path, 'log_cgp.txt'), header=None)
-        cgp.load_log(list(data.tail(1).values.flatten().astype(int)))
+        cgp.load_log(list(data.tail(1).values.flatten().astype(float)))
         cgp.modified_evolution(max_eval=250, mutation_rate=0.1, log_path=args.log_path)
 
     else:

@@ -273,11 +273,11 @@ class CGP(object):
         return log_list
 
     def load_log(self, log_data):
-        self.num_gen = log_data[0]
-        self.num_eval = log_data[1]
+        self.num_gen = int(log_data[0])
+        self.num_eval = int(log_data[1])
         net_info = self.pop[0].net_info
         self.pop[0].eval = log_data[3]
-        self.pop[0].gene = np.array(log_data[6:]).reshape(
+        self.pop[0].gene = np.int64(np.array(log_data[6:])).reshape(
             (net_info.node_num + net_info.out_num, net_info.max_in_num + 1))
         self.pop[0].check_active()
 

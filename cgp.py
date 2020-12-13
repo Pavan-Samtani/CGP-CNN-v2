@@ -277,6 +277,8 @@ class CGP(object):
         self.num_eval = int(log_data[1])
         net_info = self.pop[0].net_info
         self.pop[0].eval = log_data[3]
+        self.pop[0].size = log_data[4]
+        print("Loaded Accuracy:", self.pop[0].eval)
         self.pop[0].gene = np.int64(np.array(log_data[6:])).reshape(
             (net_info.node_num + net_info.out_num, net_info.max_in_num + 1))
         self.pop[0].check_active()
@@ -300,7 +302,8 @@ class CGP(object):
                     self.pop[0].mutation(1.0)
                     active_num = self.pop[0].count_active_node()
                     _, pool_num = self.pop[0].check_pool()
-            self._evaluation([self.pop[0]], np.array([True]))
+            if self.pop[0].eval is not None:
+                self._evaluation([self.pop[0]], np.array([True]))
             print(self._log_data(net_info_type='active_only', start_time=start_time))
 
             while self.num_gen < max_eval:

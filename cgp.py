@@ -302,7 +302,7 @@ class CGP(object):
                     self.pop[0].mutation(1.0)
                     active_num = self.pop[0].count_active_node()
                     _, pool_num = self.pop[0].check_pool()
-            if self.pop[0].eval is not None:
+            if self.pop[0].eval is None:
                 self._evaluation([self.pop[0]], np.array([True]))
             print(self._log_data(net_info_type='active_only', start_time=start_time))
 

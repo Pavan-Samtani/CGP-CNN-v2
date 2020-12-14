@@ -465,17 +465,19 @@ class CGP2CNN(nn.Module):
                         
                 else:
                     if func == "InceptionResDiv1":
-                        self.channel_num[i] = 992 + self.channel_num[in1]
                         if self.size[in1] <= 2:
+                            self.channel_num[i] = self.channel_num[in1]
                             self.size[i] = self.size[in1]
                         else:
+                            self.channel_num[i] = 992 + self.channel_num[in1]
                             self.size[i] = int((self.size[in1] - 3) / 2 + 1)
                         self.encode.append(InceptionResDiv1(self.channel_num[in1]))
                     elif func == "InceptionResDiv2":
-                        self.channel_num[i] = 768 + self.channel_num[in1]
                         if self.size[in1] <= 2:
+                            self.channel_num[i] = self.channel_num[in1]
                             self.size[i] = self.size[in1]
                         else:
+                            self.channel_num[i] = 768 + self.channel_num[in1]
                             self.size[i] = int((self.size[in1] - 3) / 2 + 1)
                         self.encode.append(InceptionResDiv2(self.channel_num[in1]))
                         
